@@ -35,4 +35,4 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:latest
             docker stop app || true
             docker rm app || true
-            docker run -d -p 3000:3000 --name app ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:latest
+            docker run -d -p 3002:3000 --name app ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:latest
