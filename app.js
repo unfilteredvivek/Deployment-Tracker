@@ -1,6 +1,5 @@
-const { exec } = require("child_process");
-
 const express = require("express");
+const { exec } = require("child_process");
 
 const app = express();
 
@@ -10,14 +9,14 @@ app.get("/", (req, res) => {
   res.send(`App is running 🚀 | Version: ${VERSION}`);
 });
 
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "OK", version: VERSION });
+app.get("/version", (req, res) => {
+  exec("docker ps --filter name=app --format '{{.Image}}'", (err, stdout) => {
+    if (err) return res.send("Error fetching version");
+    res.send(`Running: ${stdout}`);
+  });
 });
 
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
-});
-
+// 🚀 DEPLOY API
 app.post("/deploy/:version", (req, res) => {
   const version = req.params.version;
 
@@ -29,14 +28,11 @@ app.post("/deploy/:version", (req, res) => {
   `;
 
   exec(cmd, (err, stdout, stderr) => {
-    if (err) {
-      console.error(stderr);
-      return res.status(500).send("Deployment failed");
-    }
-    res.send(`Deployed version ${version}`);
+    if (err) return res.send("Deployment failed ❌");
+    res.send(`Deployed version: ${version} ✅`);
   });
 });
 
-app.get("/version", (req, res) => {
-  res.send(`Current Version: ${VERSION}`);
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
 });
