@@ -20,17 +20,19 @@ app.get("/version", (req, res) => {
 app.post("/deploy/:version", (req, res) => {
   const version = req.params.version;
 
-  const cmd = `
-    docker pull unfilteredvivek/deployment-tracker:${version} &&
-    docker stop app || true &&
-    docker rm app || true &&
-    docker run -d -p 3000:3000 --name app unfilteredvivek/deployment-tracker:${version}
-  `;
+const cmd = `
+docker rm -f deployed-app 2>/dev/null || true
+docker pull unfilteredvivek/deployment-tracker:${version}
+docker run -d -p 3001:3000 --name deployed-app unfilteredvivek/deployment-tracker:${version}
+`;
 
   exec(cmd, (err, stdout, stderr) => {
-    if (err) return res.send("Deployment failed ❌");
-    res.send(`Deployed version: ${version} ✅`);
-  });
+  if (err) {
+    console.log("ERROR:", err);
+    console.log("STDERR:", stderr);
+    return res.send(`Deployment failed ❌ \n ${stderr}`);
+  }
+  res.send(`Deployed version: ${version} ✅`);
 });
 
 app.listen(3000, () => {
