@@ -3,10 +3,10 @@ const { exec } = require("child_process");
 
 const app = express();
 
-const VERSION = "api-enabled";
+const version = "api-enabled";
 
 app.get("/", (req, res) => {
-  res.send(`App is running 🚀 | Version: ${VERSION}`);
+  res.send(`App is running 🚀 | Version: ${version}`);
 });
 
 app.get("/version", (req, res) => {
