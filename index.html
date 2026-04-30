@@ -60,10 +60,21 @@
       }
     }
 
-    async function getVersion() {
-      const res = await fetch(`${API}/version`);
-      const data = await res.text();
-      document.getElementById("status").innerText = data;
+   async function getVersion() {
+  try {
+    const res = await fetch(`${API}/version`);
+    const data = await res.text();
+    document.getElementById("status").innerText = data;
+  } catch {
+    document.getElementById("status").innerText = "API not reachable ❌";
+  }
+}
+
+// auto refresh every 5 sec
+setInterval(getVersion, 5000);
+
+// load immediately
+getVersion(); 
     }
   </script>
 
