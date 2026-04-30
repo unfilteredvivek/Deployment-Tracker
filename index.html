@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Deployment Dashboard</title>
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      background: #111;
+      color: white;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      border: none;
+      background: #00adb5;
+      color: white;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    button:hover {
+      background: #007b83;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🚀 Deployment Dashboard</h1>
+
+  <button onclick="deploy('latest')">Deploy Latest</button>
+  <button onclick="deploy('v1')">Deploy v1</button>
+  <button onclick="deploy('v2')">Deploy v2</button>
+
+  <br><br>
+
+  <button onclick="getVersion()">Check Current Version</button>
+
+  <div id="status"></div>
+
+  <script>
+    const API = "http://52.66.9.114:3000"; // your EC2
+
+    async function deploy(version) {
+      document.getElementById("status").innerText = "Deploying " + version + "...";
+
+      try {
+        const res = await fetch(`${API}/deploy/${version}`, {
+          method: "POST"
+        });
+
+        const data = await res.text();
+        document.getElementById("status").innerText = data;
+      } catch (err) {
+        document.getElementById("status").innerText = "Error ❌";
+      }
+    }
+
+    async function getVersion() {
+      const res = await fetch(`${API}/version`);
+      const data = await res.text();
+      document.getElementById("status").innerText = data;
+    }
+  </script>
+
+</body>
+</html>
