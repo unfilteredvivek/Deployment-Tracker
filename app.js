@@ -11,8 +11,11 @@ app.get("/", (req, res) => {
 
 app.get("/version", (req, res) => {
   exec("docker ps --filter name=app --format '{{.Image}}'", (err, stdout) => {
-    if (err) return res.send("Error fetching version");
-    res.send(`Running: ${stdout}`);
+    if (err) {
+      return res.send("Error fetching version");
+    }
+    
+    res.send("Running: " + stdout);
   });
 });
 

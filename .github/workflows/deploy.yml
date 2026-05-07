@@ -48,6 +48,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             docker pull ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION}}
-            docker stop app || true
-            docker rm app || true
-            docker run -d -p 3000:3000 --name app ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION}}
+            docker rm -f deployed-app || true
+            docker pull ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
+            docker run -d -p 3001:3000 --name deployed-app ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}

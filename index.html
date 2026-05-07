@@ -64,7 +64,7 @@
   try {
     const res = await fetch(`${API}/version`);
     const data = await res.text();
-    document.getElementById("status").innerText = data;
+    document.getElementById("status").innerText = data + " (updated at " + new Date().toLocaleTimeString() + ")";
   } catch {
     document.getElementById("status").innerText = "API not reachable ❌";
   }
@@ -75,7 +75,7 @@ setInterval(getVersion, 5000);
 
 // load immediately
 getVersion(); 
-    }
+    
   </script>
 
 </body>
