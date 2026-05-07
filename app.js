@@ -40,4 +40,5 @@ docker run -d -p 3001:3000 --name deployed-app unfilteredvivek/deployment-tracke
 });
 app.listen(3000, () => {
   console.log("Server running on port 3000");
+  console.log("App started - VERSION:", VERSION);
 });
