@@ -36,7 +36,8 @@ jobs:
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION}} .
 
       - name: Push Docker Image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION}}
+        run: 
+          PUSH_START=$(date +%s)
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.6
