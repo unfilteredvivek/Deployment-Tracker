@@ -10,10 +10,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: ⏱ Record Start Time
+        run: |
+          echo "PIPELINE_START=$(date +%s)" >> $GITHUB_ENV
+          echo "🚀 Pipeline started at $(date)"
+
+      - name: 📥 Checkout code
         uses: actions/checkout@v3
-  
-      - name: Connect & Deploy
+
+      - name: 🔐 Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 🏷 Set Version
+        run: echo "VERSION=${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: 🏗 Build Docker Image
+        run: |
+          BUILD_START=$(date +%s)
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }} .
+          BUILD_END=$(date +%s)
+          echo "✅ Build done in $((BUILD_END - BUILD_START))s"
+
+      - name: 📤 Push Docker Image
+        run: |
+          PUSH_START=$(date +%s)
+
+          # Push version tag → keeps your UI dashboard working ✅
+          docker push ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
+
+          # Tag and push as latest → fixes EC2 auto deploy ✅
+          docker tag ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }} \
+                     ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:latest
+
+          PUSH_END=$(date +%s)
+          echo "✅ Pushed in $((PUSH_END - PUSH_START))s"
+
+      - name: 🚀 Restart App on EC2 via PM2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -21,32 +57,26 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           script: |
             cd ~/Deployment-Tracker
-            pm2 restart app || true &
-            
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+            git pull origin main
+            pm2 restart app || pm2 start app.js --name app
 
-      - name: Set version
-        run: echo "VERSION=${{ github.run_number }}" >> $GITHUB_ENV    
-
-      - name: Build Docker Image  
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION}} .
-
-      - name: Push Docker Image
-        run: 
-          PUSH_START=$(date +%s)
-
-      - name: Deploy to EC2
+      - name: 🐳 Deploy Container to EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION}}
-            docker rm -f deployed-app || true
             docker pull ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
-            docker run -d -p 3001:3000 --name deployed-app ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
+            docker rm -f deployed-app || true
+            docker run -d -p 3001:3000 --name deployed-app \
+              ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
+            echo "✅ Deployed version ${{ env.VERSION }}"
+
+      - name: ⏱ Total Pipeline Time
+        run: |
+          PIPELINE_END=$(date +%s)
+          TOTAL=$((PIPELINE_END - PIPELINE_START))
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ TOTAL PIPELINE TIME: ${TOTAL} seconds"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━"
