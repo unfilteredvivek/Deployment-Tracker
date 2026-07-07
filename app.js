@@ -1,5 +1,44 @@
 const express = require("express");
 const { exec } = require("child_process");
+const client = require("prom-client");   // ← add this
+
+// ─── Prometheus Metrics ──────────────────────────────────────
+const register = new client.Registry();
+client.collectDefaultMetrics({ register }); // CPU, memory, event loop lag, etc.
+
+const httpRequestsTotal = new client.Counter({
+  name: "http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status"],
+  registers: [register]
+});
+
+const deploySuccessCounter = new client.Counter({
+  name: "deploy_success_total",
+  help: "Total successful deployments",
+  registers: [register]
+});
+
+const deployFailureCounter = new client.Counter({
+  name: "deploy_failure_total",
+  help: "Total failed deployments",
+  registers: [register]
+});
+
+const deployDurationSeconds = new client.Histogram({
+  name: "deploy_duration_seconds",
+  help: "Duration of deployments in seconds",
+  buckets: [1, 2, 5, 10, 20, 30, 60],
+  registers: [register]
+});
+
+const rollbackDurationSeconds = new client.Histogram({
+  name: "rollback_duration_seconds",
+  help: "Duration of rollbacks in seconds",
+  buckets: [1, 2, 5, 10, 20, 30, 60],
+  registers: [register]
+});
+// ─────────────────────────────────────────────────────────────
 
 // ─── Metrics Tracking ───────────────────────────────────────
 const startTime = Date.now();
@@ -16,6 +55,13 @@ app.use(express.json());
 // Count every incoming request
 app.use((req, res, next) => {
   totalRequests++;
+  res.on("finish", () => {
+    httpRequestsTotal.inc({
+      method: req.method,
+      route: req.route ? req.route.path : req.path,
+      status: res.statusCode
+    });
+  });
   next();
 });
 
@@ -49,6 +95,7 @@ docker run -d -p 3001:3000 --name deployed-app unfilteredvivek/deployment-tracke
   exec(cmd, (err, stdout, stderr) => {
     if (err) {
       failedDeploys++;                                         // ❌ track failure
+      deployFailureCounter.inc(); 
       console.log("ERROR:", err);
       console.log("STDERR:", stderr);
       return res.status(500).json({
@@ -59,9 +106,11 @@ docker run -d -p 3001:3000 --name deployed-app unfilteredvivek/deployment-tracke
       });
     }
 
-    successfulDeploys++;                                       // ✅ track success
-    const deployTime = ((Date.now() - deployStart) / 1000).toFixed(2);
-    console.log(`✅ Deployed ${version} in ${deployTime}s`);
+    successfulDeploys++;
+  deploySuccessCounter.inc();                          // ← add
+  const deployTime = ((Date.now() - deployStart) / 1000).toFixed(2);
+  deployDurationSeconds.observe(parseFloat(deployTime)); // ← add
+  console.log(`✅ Deployed ${version} in ${deployTime}s`);
 
     res.json({
       success: true,
@@ -85,23 +134,26 @@ docker run -d -p 3001:3000 --name deployed-app unfilteredvivek/deployment-tracke
 `;
 
   exec(cmd, (err, stdout, stderr) => {
-    if (err) {
-      failedDeploys++;
-      return res.status(500).json({
-        success: false,
-        message: `Rollback failed ❌`,
-        error: stderr
-      });
-    }
-
-    const rollbackTime = ((Date.now() - rollbackStart) / 1000).toFixed(2);
-    console.log(`🔁 Rolled back to ${version} in ${rollbackTime}s`);
-
-    res.json({
-      success: true,
-      message: `Rolled back to version: ${version} ✅`,
-      rollback_time_seconds: rollbackTime        // 🎯 this gives your resume number
+  if (err) {
+    failedDeploys++;
+    deployFailureCounter.inc();                              // ← add
+    return res.status(500).json({
+      success: false,
+      message: `Rollback failed ❌`,
+      error: stderr
     });
+  }
+
+  successfulDeploys++;                                       // ← add
+  deploySuccessCounter.inc();                                // ← add
+  const rollbackTime = ((Date.now() - rollbackStart) / 1000).toFixed(2);
+  rollbackDurationSeconds.observe(parseFloat(rollbackTime)); // ← add
+  console.log(`🔁 Rolled back to ${version} in ${rollbackTime}s`);
+
+  res.json({
+    success: true,
+    message: `Rolled back to version: ${version} ✅`,
+    rollback_time_seconds: rollbackTime
   });
 });
 
@@ -131,6 +183,10 @@ app.get("/health", (req, res) => {
   });
 });
 // ─────────────────────────────────────────────────────────────
+app.get("/metrics", async (req, res) => {
+  res.set("Content-Type", register.contentType);
+  res.end(await register.metrics());
+});
 
 app.listen(3000, () => {
   console.log("Server running on port 3000");
