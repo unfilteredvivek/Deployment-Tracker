@@ -156,6 +156,7 @@ docker run -d -p 3001:3000 --name deployed-app unfilteredvivek/deployment-tracke
     rollback_time_seconds: rollbackTime
   });
 });
+}); 
 
 app.get("/logs", (req, res) => {
   exec("docker logs deployed-app --since 10s", (err, stdout, stderr) => {
