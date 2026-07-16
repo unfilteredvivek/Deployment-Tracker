@@ -63,6 +63,16 @@ jobs:
               ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
             echo "✅ Deployed version ${{ env.VERSION }}"
 
+      - name: ☸️ Rollout Restart K8s Deployment
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            export KUBECONFIG=/home/ubuntu/.kube/config
+            kubectl rollout restart deployment deployment-tracker --request-timeout=10s || echo "⚠️ K8s rollout skipped — cluster unreachable, Docker deploy unaffected"
+            
       - name: ⏱ Total Pipeline Time
         run: |
           PIPELINE_END=$(date +%s)
