@@ -51,7 +51,7 @@ const app = express();
 const cors = require("cors");
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+
 
 // Count every incoming request
 app.use((req, res, next) => {
@@ -87,10 +87,10 @@ app.post("/deploy/:version", (req, res) => {
 
   const deployStart = Date.now();                              // ⏱ track deploy time
 
-  const cmd = `
+ const cmd = `
 docker rm -f deployed-app 2>/dev/null || true
 docker pull unfilteredvivek/deployment-tracker:${version}
-docker run -d -p 3001:3000 --name deployed-app unfilteredvivek/deployment-tracker:${version}
+docker run -d -p 3001:3000 --name deployed-app -v /var/run/docker.sock:/var/run/docker.sock unfilteredvivek/deployment-tracker:${version}
 `;
 
   exec(cmd, (err, stdout, stderr) => {
