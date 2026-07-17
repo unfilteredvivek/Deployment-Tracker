@@ -6,6 +6,8 @@ COPY package.json .
 
 RUN npm install
 
+# Install Docker CLI so the app can talk to the host's Docker daemon
+>>>>>>> 4525d934e2605436a15f6427c66e5637982d3206
 RUN apt-get update && apt-get install -y curl && \
     curl -fsSL https://get.docker.com | sh && \
     rm -rf /var/lib/apt/lists/*

@@ -49,6 +49,7 @@ jobs:
           PUSH_END=$(date +%s)
           echo "✅ Pushed in $((PUSH_END - PUSH_START))s"
 
+      
       - name: 🐳 Deploy Container to EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
@@ -59,9 +60,20 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
             docker rm -f deployed-app || true
             docker run -d -p 3001:3000 --name deployed-app \
+              -v /var/run/docker.sock:/var/run/docker.sock \
               ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
             echo "✅ Deployed version ${{ env.VERSION }}"
 
+      - name: ☸️ Rollout Restart K8s Deployment
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            export KUBECONFIG=/home/ubuntu/.kube/config
+            kubectl rollout restart deployment deployment-tracker --request-timeout=10s || echo "⚠️ K8s rollout skipped — cluster unreachable, Docker deploy unaffected"
+            
       - name: ⏱ Total Pipeline Time
         run: |
           PIPELINE_END=$(date +%s)

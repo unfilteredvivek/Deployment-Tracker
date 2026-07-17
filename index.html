@@ -71,7 +71,7 @@
   }
 }
 
-   async function getLogs() {
+async function getLogs() {
   try {
     const res = await fetch(`${API}/logs`);
     const data = await res.text();

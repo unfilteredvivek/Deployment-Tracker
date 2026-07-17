@@ -52,6 +52,7 @@ const cors = require("cors");
 app.use(cors());
 app.use(express.json());
 
+
 // Count every incoming request
 app.use((req, res, next) => {
   totalRequests++;
@@ -67,9 +68,9 @@ app.use((req, res, next) => {
 
 const version = "api-enabled";
 
-app.get("/", (req, res) => {
-  res.send(`App is running 🚀 | Version: ${version}`);
-});
+//app.get("/", (req, res) => {
+  //res.send(`App is running 🚀 | Version: ${version}`);
+//});
 
 app.get("/version", (req, res) => {
   exec("docker ps --filter name=deployed-app --format '{{.Image}}'", (err, stdout) => {
@@ -86,7 +87,7 @@ app.post("/deploy/:version", (req, res) => {
 
   const deployStart = Date.now();                              // ⏱ track deploy time
 
-  const cmd = `
+ const cmd = `
 docker rm -f deployed-app 2>/dev/null || true
 docker pull unfilteredvivek/deployment-tracker:${version}
 docker run -d -p 3001:3000 --name deployed-app -v /var/run/docker.sock:/var/run/docker.sock unfilteredvivek/deployment-tracker:${version}
