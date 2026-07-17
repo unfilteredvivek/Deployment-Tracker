@@ -60,6 +60,7 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
             docker rm -f deployed-app || true
             docker run -d -p 3001:3000 --name deployed-app \
+              -v /var/run/docker.sock:/var/run/docker.sock \
               ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
             echo "✅ Deployed version ${{ env.VERSION }}"
 
