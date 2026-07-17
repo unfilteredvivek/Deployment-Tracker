@@ -7,7 +7,9 @@ COPY package.json .
 RUN npm install
 
 # Install Docker CLI so the app can talk to the host's Docker daemon
-RUN apt-get update && apt-get install -y docker.io && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://get.docker.com | sh && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
