@@ -89,7 +89,7 @@ app.post("/deploy/:version", (req, res) => {
   const cmd = `
 docker rm -f deployed-app 2>/dev/null || true
 docker pull unfilteredvivek/deployment-tracker:${version}
-docker run -d -p 3001:3000 --name deployed-app unfilteredvivek/deployment-tracker:${version}
+docker run -d -p 3001:3000 --name deployed-app -v /var/run/docker.sock:/var/run/docker.sock unfilteredvivek/deployment-tracker:${version}
 `;
 
   exec(cmd, (err, stdout, stderr) => {
@@ -130,7 +130,7 @@ app.post("/rollback/:version", (req, res) => {
   const cmd = `
 docker rm -f deployed-app 2>/dev/null || true
 docker pull unfilteredvivek/deployment-tracker:${version}
-docker run -d -p 3001:3000 --name deployed-app unfilteredvivek/deployment-tracker:${version}
+docker run -d -p 3001:3000 --name deployed-app -v /var/run/docker.sock:/var/run/docker.sock unfilteredvivek/deployment-tracker:${version}
 `;
 
   exec(cmd, (err, stdout, stderr) => {
