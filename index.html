@@ -44,7 +44,7 @@
   <div id="status"></div>
 
   <script>
-    const API = "http://13.127.95.205:3001"; // your EC2
+    const API = window.location.origin; // your EC2
 
     async function deploy(version) {
       document.getElementById("status").innerText = "Deploying " + version + "...";
