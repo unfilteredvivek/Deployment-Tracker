@@ -8,7 +8,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: deployment-tracker
+      app: deployment-tracker-service
   namespaceSelector:
     matchNames:
       - default
