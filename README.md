@@ -1,30 +1,31 @@
-# 🚀 Deployment Tracker - CI/CD DevOps Project
+# 🚀 Deployment Tracker - Full-Stack DevOps Automation Project
 
-A full-stack DevOps project that automates Docker image build, push, and deployment using GitHub Actions, Docker Hub, and AWS EC2.
+A full-stack DevOps project demonstrating automated CI/CD, containerized deployment, Kubernetes orchestration, and real-time observability — built on AWS EC2 with Docker, GitHub Actions, Kubernetes, Prometheus, and Grafana.
 
-The project also includes a live deployment dashboard for:
-- Deploying versions
+The project includes a live deployment dashboard for:
+- Deploying and rolling back app versions
 - Monitoring running containers
-- Viewing logs
+- Viewing real-time logs
 - Tracking deployed image versions
 
 ---
 
-# 📌 Project Overview
+## 📌 Project Overview
 
-This project demonstrates an end-to-end CI/CD workflow:
+This project demonstrates an end-to-end DevOps workflow across two parallel environments — Docker (application-managed) and Kubernetes (orchestrator-managed):
 
 1. Developer pushes code to GitHub
-2. GitHub Actions pipeline starts automatically
-3. Docker image is built
-4. Image is pushed to Docker Hub
-5. EC2 server pulls latest image
-6. Existing container is replaced with new version
-7. Dashboard shows deployment status and logs
+2. GitHub Actions pipeline triggers automatically
+3. Docker image is built and pushed to Docker Hub
+4. Pipeline SSHs into EC2 and updates the **controller** container (dashboard + API)
+5. Dashboard allows deploying/rolling back a separate **deployed-app** container via its own API
+6. Kubernetes (Minikube) runs the app as a managed Deployment, supporting native rollouts (`kubectl set image`) and rollbacks (`kubectl rollout undo`)
+7. Prometheus scrapes custom application metrics and Kubernetes state metrics
+8. Grafana visualizes HTTP traffic, CPU/memory usage, deploy counters, and rollout activity
 
 ---
 
-# 🏗️ Architecture
+## 🏗️ Architecture
 
 ```text
 Developer
@@ -33,19 +34,47 @@ GitHub Repository
    ↓
 GitHub Actions (CI/CD)
    ↓
-Docker Hub (Artifact Registry)
+Docker Hub (Image Registry)
    ↓
-AWS EC2 Server
-   ↓
-Docker Container
-   ↓
-Deployment Dashboard# test Sun, Jun 14, 2026 10:04:47 PM
-# test Sun, Jun 14, 2026 10:07:47 PM
-# test Sun, Jun 14, 2026 10:10:28 PM
-# test Sun, Jun 14, 2026 10:23:18 PM
-# test Sun, Jun 14, 2026 10:23:57 PM
-# test Sun, Jun 14, 2026 10:25:41 PM
-# test Sun, Jun 14, 2026 11:46:46 PM
-# test Sun, Jun 14, 2026 11:53:58 PM
-# test Sun, Jun 14, 2026 11:55:35 PM
-# test Sun, Jun 14, 2026 11:57:13 PM
+AWS EC2 (m7i-flex.large)
+   ├── controller (Docker) — dashboard + deploy/rollback API, port 3001
+   ├── deployed-app (Docker) — managed workload, port 3002
+   └── Minikube (Kubernetes)
+         ├── deployment-tracker Deployment/Pod
+         ├── Prometheus + Grafana (via kube-prometheus-stack)
+         └── ServiceMonitor scraping custom app metrics
+```
+
+**Key design decision:** the `controller` (API/dashboard) and `deployed-app` (managed workload) are deliberately separate containers. This mirrors real-world control-plane vs. workload separation — ensuring a deploy/rollback action can never accidentally terminate the very server issuing that command.
+
+---
+
+## 🔧 Tech Stack
+
+- **Backend:** Node.js, Express
+- **Containerization:** Docker
+- **CI/CD:** GitHub Actions
+- **Orchestration:** Kubernetes (Minikube), Helm
+- **Observability:** Prometheus (`prom-client`, `kube-prometheus-stack`), Grafana
+- **Cloud:** AWS EC2
+
+---
+
+## 📊 Observability
+
+Custom application metrics exposed via `/metrics`:
+- `http_requests_total`
+- `deploy_success_total` / `deploy_failure_total`
+- `deploy_duration_seconds` / `rollback_duration_seconds`
+
+Grafana dashboard includes 5 panels: HTTP request rate, CPU usage, memory usage, application deploy success/failure, and Kubernetes rollout activity (via `kube-state-metrics`).
+
+---
+
+## 🚧 Roadmap
+
+- [ ] Terraform for infrastructure provisioning
+- [ ] Amazon ECR (replacing Docker Hub)
+- [ ] IAM least-privilege roles
+- [ ] CloudWatch + SNS alerting
+- [ ] Application Load Balancer
