@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: deployment-tracker
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -18,11 +22,16 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v3
 
-      - name: 🔐 Login to Docker Hub
-        uses: docker/login-action@v2
+      - name: 🔐 Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🔐 Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: 🏷 Set Version
         run: echo "VERSION=${{ github.run_number }}" >> $GITHUB_ENV
@@ -30,26 +39,23 @@ jobs:
       - name: 🏗 Build Docker Image
         run: |
           BUILD_START=$(date +%s)
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }} .
+          docker build -t ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.VERSION }} .
           BUILD_END=$(date +%s)
           echo "✅ Build done in $((BUILD_END - BUILD_START))s"
 
-      - name: 📤 Push Docker Image
+      - name: 📤 Push Docker Image to ECR
         run: |
           PUSH_START=$(date +%s)
+          ECR_URI=${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}
 
-          # Push version tag → keeps your UI dashboard working ✅
-          docker push ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
+          docker push $ECR_URI:${{ env.VERSION }}
 
-          # Tag and push as latest → fixes EC2 auto deploy ✅
-          docker tag ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }} \
-                     ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:latest
+          docker tag $ECR_URI:${{ env.VERSION }} $ECR_URI:latest
+          docker push $ECR_URI:latest
 
           PUSH_END=$(date +%s)
           echo "✅ Pushed in $((PUSH_END - PUSH_START))s"
 
-      
       - name: 🐳 Deploy Container to EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
@@ -57,11 +63,13 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
-            docker rm -f deployed-app || true
-            docker run -d -p 3001:3000 --name container \
+            ECR_URI=${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.ecr-login.outputs.registry }}
+            docker pull $ECR_URI:${{ env.VERSION }}
+            docker rm -f controller || true
+            docker run -d -p 3001:3000 --name controller \
               -v /var/run/docker.sock:/var/run/docker.sock \
-              ${{ secrets.DOCKER_USERNAME }}/deployment-tracker:${{ env.VERSION }}
+              $ECR_URI:${{ env.VERSION }}
             echo "✅ Deployed version ${{ env.VERSION }}"
 
       - name: ☸️ Rollout Restart K8s Deployment
@@ -73,7 +81,7 @@ jobs:
           script: |
             export KUBECONFIG=/home/ubuntu/.kube/config
             kubectl rollout restart deployment deployment-tracker --request-timeout=10s || echo "⚠️ K8s rollout skipped — cluster unreachable, Docker deploy unaffected"
-            
+
       - name: ⏱ Total Pipeline Time
         run: |
           PIPELINE_END=$(date +%s)
