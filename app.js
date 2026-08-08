@@ -89,10 +89,12 @@ app.post("/deploy/:version", (req, res) => {
 
   const deployStart = Date.now();                              // ⏱ track deploy time
 
- const cmd = `
+const ecrRegistry = "395671099497.dkr.ecr.ap-south-1.amazonaws.com";
+const cmd = `
+aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${ecrRegistry}
 docker rm -f deployed-app 2>/dev/null || true
-docker pull unfilteredvivek/deployment-tracker:${version}
-docker run -d -p 3002:3000 --name deployed-app -v /var/run/docker.sock:/var/run/docker.sock unfilteredvivek/deployment-tracker:${version}
+docker pull ${ecrRegistry}/deployment-tracker:${version}
+docker run -d -p 3002:3000 --name deployed-app -v /var/run/docker.sock:/var/run/docker.sock ${ecrRegistry}/deployment-tracker:${version}
 `;
 
   exec(cmd, (err, stdout, stderr) => {
@@ -130,10 +132,12 @@ app.post("/rollback/:version", (req, res) => {
 
   const rollbackStart = Date.now();                            // ⏱ track rollback time
 
-  const cmd = `
+ const ecrRegistry = "395671099497.dkr.ecr.ap-south-1.amazonaws.com";
+const cmd = `
+aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${ecrRegistry}
 docker rm -f deployed-app 2>/dev/null || true
-docker pull unfilteredvivek/deployment-tracker:${version}
-docker run -d -p 3002:3000 --name deployed-app -v /var/run/docker.sock:/var/run/docker.sock unfilteredvivek/deployment-tracker:${version}
+docker pull ${ecrRegistry}/deployment-tracker:${version}
+docker run -d -p 3002:3000 --name deployed-app -v /var/run/docker.sock:/var/run/docker.sock ${ecrRegistry}/deployment-tracker:${version}
 `;
 
   exec(cmd, (err, stdout, stderr) => {
