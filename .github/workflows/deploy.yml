@@ -69,6 +69,8 @@ jobs:
             docker rm -f controller || true
             docker run -d -p 3001:3000 --name controller \
               -v /var/run/docker.sock:/var/run/docker.sock \
+               -e DB_HOST=${{ secrets.DB_HOST }} \
+               -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
               $ECR_URI:${{ env.VERSION }}
             echo "✅ Deployed version ${{ env.VERSION }}"
 
