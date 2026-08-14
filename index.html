@@ -40,6 +40,23 @@
 
   <button onclick="getVersion()">Check Current Version</button>
   <button onclick="getLogs()">Get Logs</button>
+  <button onclick="loadHistory()">Deployment History</button>
+
+<div id="history-section" style="margin-top: 30px;">
+  <table id="history-table" style="width:100%; border-collapse: collapse; color: white;">
+    <thead>
+      <tr style="border-bottom: 1px solid #444;">
+        <th style="padding: 8px; text-align: left;">Action</th>
+        <th style="padding: 8px; text-align: left;">Version</th>
+        <th style="padding: 8px; text-align: left;">Status</th>
+        <th style="padding: 8px; text-align: left;">Duration (s)</th>
+        <th style="padding: 8px; text-align: left;">Time</th>
+      </tr>
+    </thead>
+    <tbody id="history-body"></tbody>
+  </table>
+</div>
+
 
   <div id="status"></div>
 
@@ -81,11 +98,32 @@ async function getLogs() {
   }
 }
 
+ async function loadHistory() {
+    try {
+      const res = await fetch(`${API}/history`);
+      const data = await res.json();
+      const tbody = document.getElementById("history-body");
+      tbody.innerHTML = data.map(row => `
+        <tr style="border-bottom: 1px solid #333;">
+          <td style="padding: 8px;">${row.action}</td>
+          <td style="padding: 8px;">${row.version}</td>
+          <td style="padding: 8px;">${row.success ? "✅" : "❌"}</td>
+          <td style="padding: 8px;">${row.duration_seconds ?? "-"}</td>
+          <td style="padding: 8px;">${new Date(row.created_at).toLocaleString()}</td>
+        </tr>
+      `).join("");
+    } catch (err) {
+      document.getElementById("history-body").innerHTML =
+        `<tr><td colspan="5" style="padding:8px;">Failed to load history ❌</td></tr>`;
+    }
+  }
+
 // auto refresh every 5 sec
 setInterval(getVersion, 5000);
 
 // load immediately
 getVersion(); 
+loadHistory(); 
     
   </script>
 
