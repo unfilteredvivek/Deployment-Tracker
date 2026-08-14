@@ -77,4 +77,4 @@ Grafana dashboard includes 5 panels: HTTP request rate, CPU usage, memory usage,
 - [ ] Amazon ECR (replacing Docker Hub)
 - [ ] IAM least-privilege roles
 - [ ] CloudWatch + SNS alerting
-- [ ] Application Load Balancer
+- [ ] Application Load Balancer 
